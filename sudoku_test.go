@@ -45,6 +45,18 @@ var unsolved9 = Board{
 	{0, 0, 0, 0, 0, 0, 0, 0, 0},
 }
 
+var unsolved9b = Board{
+	{9, 0, 7, 0, 0, 4, 3, 0, 1},
+	{6, 0, 4, 3, 0, 1, 9, 0, 7},
+	{3, 0, 1, 9, 0, 7, 6, 0, 4},
+	{0, 9, 6, 7, 4, 5, 2, 1, 3},
+	{7, 0, 5, 2, 1, 3, 0, 9, 6},
+	{2, 1, 3, 8, 9, 0, 7, 4, 5},
+	{5, 7, 9, 4, 0, 0, 1, 0, 2},
+	{4, 0, 0, 1, 3, 2, 5, 7, 9},
+	{1, 0, 2, 5, 7, 9, 4, 0, 0},
+}
+
 var solved9 = Board{
 	{9, 8, 7, 6, 5, 4, 3, 2, 1},
 	{6, 5, 4, 3, 2, 1, 9, 8, 7},
@@ -62,6 +74,62 @@ var annotated4 = [][]Candidates{
 	{24, 4, 18, 10},
 	{20, 18, 8, 6},
 	{12, 10, 6, 16},
+}
+
+func TestCandidateLines(t *testing.T) {
+	ab, _ := NewAnnotatedBoard(unsolved9b)
+
+	// Col 2
+	if !ab.Candidates[0][1].Contains(8) {
+		t.Error("Expected Candidates[0][1] to contain 8.")
+	}
+	if !ab.Candidates[4][1].Contains(8) {
+		t.Error("Expected Candidates[4][1] to contain 8.")
+	}
+	if !ab.Candidates[7][1].Contains(8) {
+		t.Error("Expected Candidates[7][1] to contain 8.")
+	}
+	if !ab.Candidates[8][1].Contains(8) {
+		t.Error("Expected Candidates[8][1] to contain 8.")
+	}
+
+	// Row 7
+	if !ab.Candidates[6][4].Contains(6) {
+		t.Error("Expected Candidates[6][4] to contain 6.")
+	}
+	if !ab.Candidates[6][5].Contains(6) {
+		t.Error("Expected Candidates[6][5] to contain 6.")
+	}
+	if !ab.Candidates[6][7].Contains(6) {
+		t.Error("Expected Candidates[6][7] to contain 6.")
+	}
+
+	ab2, _ := CandidateLines(ab)
+
+	// Col 2
+	if !ab2.Candidates[0][1].Contains(8) {
+		t.Error("Expected simplified Candidates[0][1] to still contain 8.")
+	}
+	if ab2.Candidates[4][1].Contains(8) {
+		t.Error("Expected simplified Candidates[4][1] not to contain 8.")
+	}
+	if ab2.Candidates[7][1].Contains(8) {
+		t.Error("Expected simplified Candidates[7][1] not to contain 8.")
+	}
+	if ab2.Candidates[8][1].Contains(8) {
+		t.Error("Expected simplified Candidates[8][1] not to contain 8.")
+	}
+
+	// Row 7
+	if !ab2.Candidates[6][4].Contains(6) {
+		t.Error("Expected simplified Candidates[6][4] to contain 6.")
+	}
+	if ab2.Candidates[6][5].Contains(6) {
+		t.Error("Expected simplified Candidates[6][5] to contain 6.")
+	}
+	if ab2.Candidates[6][7].Contains(6) {
+		t.Error("Expected simplified Candidates[6][7] not to contain 6.")
+	}
 }
 
 func TestFirstEmpty(t *testing.T) {
@@ -156,11 +224,15 @@ func TestCandidates(t *testing.T) {
 	if c.Single() {
 		t.Errorf("Expected %+v not to be single.", c)
 	}
-	c = c.Subtract(7)
+	c = c.Remove(7)
 	if "1000000010" != b(c) {
 		t.Errorf(`Expected "1000000010", got "%s".`, b(c))
 	}
-	c = c.Subtract(9)
+	c2 := c.Complement(9)
+	if "111111100" != b(c2) {
+		t.Errorf(`Expected "111111100", got "%s".`, b(c2))
+	}
+	c = c.Remove(9)
 	if "10" != b(c) {
 		t.Errorf(`Expected "10", got "%s".`, b(c))
 	}

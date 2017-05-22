@@ -13,7 +13,7 @@ type Board [][]int
 
 // Copy returns a copy of the board. Helpful to stay as immutible as possible for now.
 func (bo Board) Copy() (bo2 Board) {
-	size := len(bo)
+	size := bo.Size()
 	bo2 = make(Board, size)
 	for i := range bo {
 		bo2[i] = make([]int, size)
@@ -33,6 +33,11 @@ func (bo Board) FirstEmpty() (y, x int, found bool) {
 		}
 	}
 	return
+}
+
+// Size returns the size of the sides of the board
+func (bo Board) Size() int {
+	return len(bo[0])
 }
 
 const abc = "abcdefghijklmnopqrstuvwxyz"
@@ -57,8 +62,8 @@ func (c Candidates) Add(v int) Candidates {
 	return c | 1<<uint(v)
 }
 
-// Subtract removes provided number from candidates (if exists).
-func (c Candidates) Subtract(v int) Candidates {
+// Remove provided number from candidates (if exists).
+func (c Candidates) Remove(v int) Candidates {
 	return c &^ (1 << uint(v))
 }
 
@@ -86,11 +91,27 @@ func (c Candidates) Decimals() (dcs []int) {
 	return
 }
 
-// AnnotatedBoard enriches a board with various annotation ("penceling") helpers.
+// Complement returns the candidates not represented assuming a sudoku of provided size.
+func (c Candidates) Complement(size int) Candidates {
+	return allCandidates(size) - c
+}
+
+// AnnotatedBoard contains "penciled" candidates.
 type AnnotatedBoard struct {
 	Board
-	Candidates, Blocks [][]Candidates
-	Rows, Cols         []Candidates
+	Candidates [][]Candidates
+}
+
+// Copy returns a copy of the annotated board. Helpful to stay as immutible as possible for now.
+func (ab AnnotatedBoard) Copy() (ab2 AnnotatedBoard) {
+	size := ab.Size()
+	ab2.Candidates = make([][]Candidates, size)
+	for i := range ab.Candidates {
+		ab2.Candidates[i] = make([]Candidates, len(ab.Candidates[i]))
+		copy(ab2.Candidates[i], ab.Candidates[i])
+	}
+	ab2.Board = ab.Board.Copy()
+	return
 }
 
 // NewAnnotatedBoard returns an annotated version of provided board.
@@ -115,20 +136,21 @@ func (ab AnnotatedBoard) Solved() bool {
 // All data except board will be overwritten.
 func (ab AnnotatedBoard) Annotate() (AnnotatedBoard, error) {
 	ab.Board = ab.Board.Copy()
-	le := len(ab.Board[0])
-	rt := sqrt(le)
-	ab.Rows, ab.Cols = make([]Candidates, le), make([]Candidates, le)
-	ab.Candidates, ab.Blocks = newBlockCandidates(le), newBlockCandidates(rt)
+	size := ab.Size()
+	rt := sqrt(size)
+	rows, cols := make([]Candidates, size), make([]Candidates, size)
+	ab.Candidates = newBlockCandidates(size)
+	blocks := newBlockCandidates(rt)
 	for y, row := range ab.Board {
 		for x, v := range row {
 			if v > 0 {
-				if ab.Rows[y].Contains(v) || ab.Cols[x].Contains(v) || ab.Blocks[y/rt][x/rt].Contains(v) {
+				if rows[y].Contains(v) || cols[x].Contains(v) || blocks[y/rt][x/rt].Contains(v) {
 					return ab, errors.New("Not Solvable.")
 				}
 				ab.Candidates[y][x] = ab.Candidates[y][x].Add(v)
-				ab.Rows[y] = ab.Rows[y].Add(v)
-				ab.Cols[x] = ab.Cols[x].Add(v)
-				ab.Blocks[y/rt][x/rt] = ab.Blocks[y/rt][x/rt].Add(v)
+				rows[y] = rows[y].Add(v)
+				cols[x] = cols[x].Add(v)
+				blocks[y/rt][x/rt] = blocks[y/rt][x/rt].Add(v)
 			}
 		}
 	}
@@ -137,7 +159,7 @@ func (ab AnnotatedBoard) Annotate() (AnnotatedBoard, error) {
 			if v > 1 {
 				continue
 			}
-			ab.Candidates[y][x] = allCandidates(le) &^ ab.Rows[y] &^ ab.Cols[x] &^ ab.Blocks[y/rt][x/rt]
+			ab.Candidates[y][x] = allCandidates(size) &^ rows[y] &^ cols[x] &^ blocks[y/rt][x/rt]
 		}
 	}
 	return ab, nil
@@ -155,7 +177,7 @@ type Solver func(ab AnnotatedBoard, maxSolutions int) (solved bool, solutions []
 // It will not return more than one solution.
 func SingleCandidate(ab AnnotatedBoard, maxSolutions int) (bool, []Board) {
 	solvable := true
-	ab.Board = ab.Copy()
+	ab = ab.Copy()
 
 	for solvable {
 		solvable = false
@@ -198,6 +220,68 @@ func backtrack(ab AnnotatedBoard, maxSolutions int, solutions *[]Board) bool {
 		}
 	}
 	return false
+}
+
+// A Simplifier does not solve a sudoku but tries to remove candidates.
+type Simplifier func(ab AnnotatedBoard) (ab2 AnnotatedBoard, succeeded bool)
+
+// CandidateLines tries to simplify by finding candidates of the same kind on the same row or column within a block, so that they can be safely removed from other fields of that line not within that block.
+func CandidateLines(ab AnnotatedBoard) (ab2 AnnotatedBoard, succeeded bool) {
+	ab2 = ab.Copy()
+	size := ab2.Size()
+	blockSize := sqrt(size)
+
+	// Iterate over blocks.
+	for blkY := 0; blkY < blockSize; blkY++ {
+		for blkX := 0; blkX < blockSize; blkX++ {
+			// Build other rows and cols for easier removal of found candidates from them.
+			rowsNotInBlock, colsNotInBlock := allCandidates(size), allCandidates(size)
+			// Build maps for indices per candidates (if a candidate is in a single row/col - that will be a win!).
+			inRows, inCols := map[int]Candidates{}, map[int]Candidates{}
+			// Iterate over rows in block.
+			for yInBlk := 0; yInBlk < blockSize; yInBlk++ {
+				y := blkY*blockSize + yInBlk
+				rowsNotInBlock = rowsNotInBlock.Remove(y + 1)
+				// Iterate over cols in block.
+				for xInBlk := 0; xInBlk < blockSize; xInBlk++ {
+					x := blkX*blockSize + xInBlk
+					colsNotInBlock = colsNotInBlock.Remove(x + 1)
+					cs := ab2.Candidates[y][x]
+					// Add one-based candidate indices to maps.
+					for _, c := range cs.Decimals() {
+						inRows[c] = inRows[c].Add(y + 1)
+						inCols[c] = inCols[c].Add(x + 1)
+					}
+				}
+			}
+
+			// Remove found line candidates from other lines.
+			for c, cols := range inCols {
+				if cols.Single() {
+					col := cols.Decimals()[0] - 1
+					for _, row := range rowsNotInBlock.Decimals() {
+						if ab2.Candidates[row-1][col].Contains(c) {
+							succeeded = true
+							ab2.Candidates[row-1][col] = ab2.Candidates[row-1][col].Remove(c)
+						}
+					}
+				}
+			}
+			for c, rows := range inRows {
+				if rows.Single() {
+					row := rows.Decimals()[0] - 1
+					for _, col := range colsNotInBlock.Decimals() {
+						if ab2.Candidates[row][col-1].Contains(c) {
+							succeeded = true
+							ab2.Candidates[row][col-1] = ab2.Candidates[row][col-1].Remove(c)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return
 }
 
 // Helpers
