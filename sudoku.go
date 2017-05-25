@@ -5,11 +5,26 @@ import (
 	"errors"
 	"log"
 	"math"
+	"math/rand"
 	"strconv"
+	"time"
 )
+
+func init() {
+	rand.Seed(time.Now().Unix())
+}
 
 // Board contains all fields of a simple, unannotated sudoku.
 type Board [][]int
+
+// NewEmptyBoard builds an empty board with provided size.
+func NewEmptyBoard(size int) Board {
+	bo := make(Board, size)
+	for i := range bo {
+		bo[i] = make([]int, size)
+	}
+	return bo
+}
 
 // Copy returns a copy of the board. Helpful to stay as immutible as possible for now.
 func (bo Board) Copy() (bo2 Board) {
@@ -38,6 +53,17 @@ func (bo Board) FirstEmpty() (y, x int, found bool) {
 // Size returns the size of the sides of the board
 func (bo Board) Size() int {
 	return len(bo[0])
+}
+
+// NewRandomBoard returns a solved, pseudo random board of provided size.
+func NewRandomBoard(size int) Board {
+	ab, _ := NewAnnotatedBoard(NewEmptyBoard(size))
+	for i, v := range rand.Perm(size) {
+		ab.Board[0][i] = v + 1
+	}
+	_, solutions := Backtrack(ab, 10)
+
+	return solutions[rand.Intn(len(solutions))]
 }
 
 const abc = "abcdefghijklmnopqrstuvwxyz"
@@ -282,6 +308,37 @@ func CandidateLines(ab AnnotatedBoard) (ab2 AnnotatedBoard, succeeded bool) {
 	}
 
 	return
+}
+
+// A Generator combines different functions to create an unsolved version of the provided board.
+type Generator func(random Board) (unsolved Board)
+
+// GenerateSimple generates a board that is solvable with only single candidates strategy.
+func GenerateSimple(random Board) (unsolved Board) {
+	size := random.Size()
+	fields := [][3]int{}
+	for y := 0; y < size; y++ {
+		for x := 0; x < size; x++ {
+			fields = append(fields, [3]int{y, x, random[y][x]})
+		}
+	}
+
+	for i := range fields {
+		j := rand.Intn(i + 1)
+		fields[i], fields[j] = fields[j], fields[i]
+	}
+
+	ab, _ := NewAnnotatedBoard(random)
+
+	for _, f := range fields {
+		ab.Board[f[0]][f[1]] = 0
+		ab, _ = ab.Annotate()
+		solvable, _ := SingleCandidate(ab, 1)
+		if !solvable {
+			ab.Board[f[0]][f[1]] = f[2]
+		}
+	}
+	return ab.Board
 }
 
 // Helpers

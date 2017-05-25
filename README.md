@@ -7,6 +7,8 @@
 
 This project aims to implement different techniques for simplifying and solving sudokus.
 
+Beware of braking changes! The API is not stable at all!
+
 For good descriptions of some techniques check out [Sudoku of the Day](https://www.sudokuoftheday.com/techniques/) (no affiliation)!
 
 You can see the code in action [here](https://twitter.com/SudokuPur) (in German).

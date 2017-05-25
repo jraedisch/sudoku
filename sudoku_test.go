@@ -76,6 +76,20 @@ var annotated4 = [][]Candidates{
 	{12, 10, 6, 16},
 }
 
+func TestGenerateSimple(t *testing.T) {
+	size := 9
+	solved := NewRandomBoard(size)
+	unsolved := GenerateSimple(solved)
+
+	for y, r := range unsolved {
+		for x, c := range r {
+			if c != 0 && c != solved[y][x] {
+				t.Fatalf("Expected solved to contain unsolved:\n%+v\n%+v", solved, unsolved)
+			}
+		}
+	}
+}
+
 func TestCandidateLines(t *testing.T) {
 	ab, _ := NewAnnotatedBoard(unsolved9b)
 
