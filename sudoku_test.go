@@ -76,6 +76,32 @@ var annotated4 = [][]Candidates{
 	{12, 10, 6, 16},
 }
 
+func TestShort(t *testing.T) {
+	l(solved9.Short())
+	_, err := NewFromShort("", 9)
+	if err != nil {
+		t.Error("Unexpected error for empty short notation.")
+	}
+
+	expected := "a11a22a33a44b13b24b31b42c14c21c32c43d12d23d34d41"
+	actual, _ := solved4.Short()
+	if expected != actual {
+		t.Errorf("Expected short notations to match:\n%s\n%s", expected, actual)
+	}
+
+	short, _ := unsolved9b.Short()
+	parsed, _ := NewFromShort(short, 9)
+	if !reflect.DeepEqual(unsolved9b, parsed) {
+		t.Errorf("Expected original to equal parsed board:\n%+v\n%+v", unsolved9b, parsed)
+	}
+}
+
+func TestFull(t *testing.T) {
+	if true != solved9.Full() {
+		t.Error("Expected solved board to be full.")
+	}
+}
+
 func TestGenerateSimple(t *testing.T) {
 	size := 9
 	solved := NewRandomBoard(size)

@@ -3,10 +3,13 @@ package sudoku
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"math"
 	"math/rand"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -50,6 +53,12 @@ func (bo Board) FirstEmpty() (y, x int, found bool) {
 	return
 }
 
+// Full returns if there are no empty fields left. It does not check correctness.
+func (bo Board) Full() bool {
+	_, _, found := bo.FirstEmpty()
+	return !found
+}
+
 // Size returns the size of the sides of the board
 func (bo Board) Size() int {
 	return len(bo[0])
@@ -68,12 +77,36 @@ func NewRandomBoard(size int) Board {
 
 const abc = "abcdefghijklmnopqrstuvwxyz"
 
+var reShortNotation = regexp.MustCompile("([a-z][1-9][1-9])")
+
+// NewFromShort tries to parse provided short notation into board with provided size.
+func NewFromShort(s string, size int) (bo Board, err error) {
+	bo = NewEmptyBoard(size)
+	if s == "" {
+		return
+	}
+	if !reShortNotation.MatchString(s) {
+		return nil, fmt.Errorf("Malformed Short Notation: %s", s)
+	}
+
+	for _, triple := range reShortNotation.FindAllString(s, len(s)/3) {
+		y := strings.Index(abc, string(triple[0]))
+		x, _ := strconv.Atoi(string(triple[1]))
+		v, _ := strconv.Atoi(string(triple[2]))
+		bo[y][x-1] = v
+	}
+	return
+}
+
 // Short returns simple sudoku string representation, e.g. "a18b52".
-func (bo Board) Short() (s string) {
+func (bo Board) Short() (s string, err error) {
+	if bo.Size() > 9 {
+		return "", errors.New("Board Too Large For Short Notation")
+	}
 	for y, row := range bo {
 		for x, v := range row {
 			if v > 0 {
-				s += string(abc[x]) + strconv.Itoa(y+1) + strconv.Itoa(v)
+				s = s + string(abc[y]) + strconv.Itoa(x+1) + strconv.Itoa(v)
 			}
 		}
 	}
