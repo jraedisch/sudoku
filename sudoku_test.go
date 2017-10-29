@@ -77,7 +77,6 @@ var annotated4 = [][]Candidates{
 }
 
 func TestShort(t *testing.T) {
-	l(solved9.Short())
 	_, err := NewFromShort("", 9)
 	if err != nil {
 		t.Error("Unexpected error for empty short notation.")
@@ -93,6 +92,17 @@ func TestShort(t *testing.T) {
 	parsed, _ := NewFromShort(short, 9)
 	if !reflect.DeepEqual(unsolved9b, parsed) {
 		t.Errorf("Expected original to equal parsed board:\n%+v\n%+v", unsolved9b, parsed)
+	}
+}
+
+func TestUltraShort(t *testing.T) {
+	expected := "9876543265432198321987658967452174521389213896745794681346813257"
+	actual, err := solved9.UltraShort()
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	if expected != actual {
+		t.Errorf("Expected short notations to match:\n%s\n%s", expected, actual)
 	}
 }
 

@@ -113,6 +113,24 @@ func (bo Board) Short() (s string, err error) {
 	return
 }
 
+// UltraShort returns an even shorter identifier only if board is full.
+// It does so by returning only values and removing the last column and row.
+// A 9x9 sudoku will thus result in 64 chars.
+func (bo Board) UltraShort() (s string, err error) {
+	if !bo.Full() {
+		return "", errors.New("Board Is Not Full")
+	}
+	sizeWithoutLast := bo.Size() - 1
+	for y, row := range bo {
+		for x, v := range row {
+			if y < sizeWithoutLast && x < sizeWithoutLast {
+				s = s + strconv.Itoa(v)
+			}
+		}
+	}
+	return
+}
+
 // Candidates contains all "penciled" numbers that may occupy a field.
 type Candidates int
 
