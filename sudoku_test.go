@@ -115,7 +115,7 @@ func TestFull(t *testing.T) {
 func TestGenerateSimple(t *testing.T) {
 	size := 9
 	solved := NewRandomBoard(size)
-	unsolved := GenerateSimple(solved)
+	unsolved := GenerateSimple(solved, 70)
 
 	for y, r := range unsolved {
 		for x, c := range r {
@@ -123,6 +123,14 @@ func TestGenerateSimple(t *testing.T) {
 				t.Fatalf("Expected solved to contain unsolved:\n%+v\n%+v", solved, unsolved)
 			}
 		}
+	}
+
+	expectedLength := 210
+	actualShort, _ := unsolved.Short()
+	actualLength := len(actualShort)
+
+	if expectedLength != actualLength {
+		t.Errorf("expected length %d, got %d", expectedLength, actualLength)
 	}
 }
 

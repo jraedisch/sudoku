@@ -361,11 +361,11 @@ func CandidateLines(ab AnnotatedBoard) (ab2 AnnotatedBoard, succeeded bool) {
 	return
 }
 
-// A Generator combines different functions to create an unsolved version of the provided board.
-type Generator func(random Board) (unsolved Board)
-
 // GenerateSimple generates a board that is solvable with only single candidates strategy.
-func GenerateSimple(random Board) (unsolved Board) {
+// Minimum param sets the number of minimum numbers that should remain on sudoku.
+// minimum <= 0 will be ignored (hardest) and the higher the easier it gets.
+// minimum >= size² makes no sense.
+func GenerateSimple(random Board, minimum int) (unsolved Board) {
 	size := random.Size()
 	fields := [][3]int{}
 	for y := 0; y < size; y++ {
@@ -380,13 +380,18 @@ func GenerateSimple(random Board) (unsolved Board) {
 	}
 
 	ab, _ := NewAnnotatedBoard(random)
+	fieldCount := len(fields)
+	validMinimum := minimum > 0 && minimum < fieldCount
 
-	for _, f := range fields {
+	for i, f := range fields {
 		ab.Board[f[0]][f[1]] = 0
 		ab, _ = ab.Annotate()
 		solvable, _ := SingleCandidate(ab, 1)
 		if !solvable {
 			ab.Board[f[0]][f[1]] = f[2]
+		}
+		if validMinimum && (fieldCount-i-1) == minimum {
+			return ab.Board
 		}
 	}
 	return ab.Board
