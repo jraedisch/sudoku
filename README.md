@@ -11,6 +11,6 @@ Beware of breaking changes! The API is not stable at all!
 
 For good descriptions of some techniques check out [Sudoku of the Day](https://www.sudokuoftheday.com/techniques/) (no affiliation)!
 
-You can see the code in action [here](https://twitter.com/SudokuPur) (in German).
+You can see the code in action at [sudokoin.com](https://sudokoin.com).
 
 All help is greatly appreciated!
